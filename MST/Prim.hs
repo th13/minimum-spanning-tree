@@ -19,9 +19,11 @@ crossingCut v s = filter (crossesCut v s)
 -- | Select lightest edge between vertices in S and V \ S
 lightestEdge :: [Node] -> [Node] -> [Edge] -> Maybe Edge
 lightestEdge v s edges
-  | v \\ s == [] = Nothing
-  | otherwise    = return $ foldr1 lighterEdge (crossingCut v s edges)
-  where lighterEdge e1 e2
+  | v \\ s == []     = Nothing
+  | crossEdges == [] = Just $ Edge (-1) 0 0        -- Hack to identify when we have an impossible graph.
+  | otherwise        = return $ foldr1 lighterEdge crossEdges
+  where crossEdges = crossingCut v s edges
+        lighterEdge e1 e2
           | weight e1 < weight e2 = e1
           | otherwise             = e2
 
@@ -29,9 +31,8 @@ lightestEdge v s edges
 mst :: Graph -> Maybe Graph
 mst g = mst' g [head $ nodes g] []
   where mst' g@(Graph v es) s a
-          | isNothing le = if (length s) == (length v)
-                             then return $ Graph (sort . nub $ s) a
-                             else Nothing
+          | isNothing le = Just $ Graph (sort . nub $ s) a
+          | n1 (fromJust le) == -1  = Nothing       -- Impossible to form MST.
           | otherwise    = mst' g s' a'
           where le = lightestEdge v s es
                 s' = s ++ [(n2 $ fromJust le), (n1 $ fromJust le)]
